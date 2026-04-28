@@ -1,3 +1,4 @@
+
 import { createClient } from 'redis';
 import { config } from './config';
 import sysLogger from '../utils/logger';
@@ -14,3 +15,4 @@ export const redisClient = createClient({
 redisClient.on('error', (err) => {
   sysLogger.error(`Redis Client Error: ${err}`);
 });
+
