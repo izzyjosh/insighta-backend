@@ -37,6 +37,14 @@ profileRouter.get(
   },
 );
 
+profileRouter.get(
+  '/export',
+  validateQueryParams(filterQuerySchema),
+  (req, res, next) => {
+    profileController.exportProfiles(req, res, next);
+  },
+);
+
 profileRouter.get('/:id', (req: Request<{ id: string }>, res: Response, next: NextFunction) => {
   profileController.getProfile(req, res, next);
 });

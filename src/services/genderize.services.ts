@@ -240,6 +240,18 @@ class ProfileService {
     };
   }
 
+  async exportProfiles(filters: FilterQueryDTO) {
+    const baseQuery = this.profileRepository.createQueryBuilder('profile');
+
+    const filteredQuery = await this.applyFilters(baseQuery, filters);
+
+    const orderedQuery = filteredQuery.clone().orderBy(filters.sort_by, filters.order);
+
+    const data = await orderedQuery.getMany();
+
+    return data.map((profile) => profileResponseSchema.parse(profile));
+  }
+
   async deleteProfile(id: string) {
     const profile = await this.profileRepository.findOneBy({ id });
     if (!profile) {
