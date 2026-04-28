@@ -219,8 +219,6 @@ class ProfileService {
 
     const filteredQuery = await this.applyFilters(baseQuery, filters);
 
-    const total = await filteredQuery.getCount();
-
     const profiles = await filteredQuery
       .clone()
       .orderBy(filters.sort_by, filters.order)
@@ -228,9 +226,12 @@ class ProfileService {
       .take(limit)
       .getMany();
 
+    const total = await baseQuery.getCount();
+
     const profilesMap: ProfileResponseDTO[] = profiles.map((profile: Profile) =>
       profileResponseSchema.parse(profile),
     );
+    
     return {
       profiles: profilesMap,
       page: filters.page,
@@ -267,7 +268,7 @@ class ProfileService {
 
     const filteredQuery = await this.applyFilters(baseQuery, naturalFilters);
 
-    const total = await filteredQuery.getCount();
+    const total = await baseQuery.getCount();
 
     const data = await filteredQuery.clone().skip(skip).take(limit).getMany();
     return {
