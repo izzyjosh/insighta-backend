@@ -42,3 +42,9 @@ export class ValidationError extends ApiError {
     super(message, StatusCodes.UNPROCESSABLE_ENTITY);
   }
 }
+
+export class ForbiddenError extends ApiError {
+  constructor(message: string = 'Forbidden error') {
+    super(message, StatusCodes.FORBIDDEN);
+  }
+}

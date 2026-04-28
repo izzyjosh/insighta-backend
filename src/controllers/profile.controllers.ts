@@ -101,7 +101,7 @@ class ProfileController {
     next: NextFunction,
   ): Promise<void> {
     try {
-      const id = req.params?.id;
+      const id = req.params.id;
       await profileService.deleteProfile(id);
       res.status(StatusCodes.NO_CONTENT).send();
     } catch (error) {
