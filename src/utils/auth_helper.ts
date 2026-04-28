@@ -28,9 +28,9 @@ export function hash(token: string): string {
 }
 
 export function verifyToken(token: string) {
-    try { 
-        return jwt.verify(token, config.secret.jwtsecret) as User;
-    } catch (error) {
-        throw new Error('Invalid or expired token');
-    }
+  try {
+    return jwt.verify(token, config.secret.jwtsecret) as User;
+  } catch (error) {
+    throw new Error('Invalid or expired token');
+  }
 }

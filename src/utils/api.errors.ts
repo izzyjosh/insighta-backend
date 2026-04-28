@@ -43,8 +43,8 @@ export class ValidationError extends ApiError {
   }
 }
 
-export class ForbiddenError extends ApiError{
-  constructor(message: string = "Forbidden error") {
-    super(message, StatusCodes.FORBIDDEN)
+export class ForbiddenError extends ApiError {
+  constructor(message: string = 'Forbidden error') {
+    super(message, StatusCodes.FORBIDDEN);
   }
 }

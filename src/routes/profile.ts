@@ -12,9 +12,14 @@ import { requireRole } from '../middlewares/authMiddleware';
 
 const profileRouter = Router();
 
-profileRouter.post('/', validateRequest(), requireRole("admin"), (req, res, next) => {
-  profileController.classify(req, res, next);
-});
+profileRouter.post(
+  '/',
+  validateRequest(),
+  requireRole('admin'),
+  (req, res, next) => {
+    profileController.classify(req, res, next);
+  },
+);
 
 profileRouter.get(
   '/',
@@ -36,7 +41,7 @@ profileRouter.get('/:id', (req, res, next) => {
   profileController.getProfile(req, res, next);
 });
 
-profileRouter.delete('/:id', requireRole("admin"), (req, res, next) => {
+profileRouter.delete('/:id', requireRole('admin'), (req, res, next) => {
   profileController.deleteProfile(req, res, next);
 });
 

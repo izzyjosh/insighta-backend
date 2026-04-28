@@ -28,7 +28,6 @@ app.use(
 
 app.use(httpLogger);
 
-
 app.use('/api/auth', authRouter);
 app.use('/api/profiles', authMiddleware, apiVersion, profileRouter);
 
