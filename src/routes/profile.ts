@@ -8,10 +8,11 @@ import {
   filterQuerySchema,
   naturalSearchSchema,
 } from '../schemas/profile.schemas';
+import { requireRole } from '../middlewares/authMiddleware';
 
 const profileRouter = Router();
 
-profileRouter.post('/', validateRequest(), (req, res, next) => {
+profileRouter.post('/', validateRequest(), requireRole("admin"), (req, res, next) => {
   profileController.classify(req, res, next);
 });
 
@@ -35,7 +36,7 @@ profileRouter.get('/:id', (req, res, next) => {
   profileController.getProfile(req, res, next);
 });
 
-profileRouter.delete('/:id', (req, res, next) => {
+profileRouter.delete('/:id', requireRole("admin"), (req, res, next) => {
   profileController.deleteProfile(req, res, next);
 });
 
