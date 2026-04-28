@@ -24,11 +24,15 @@
   },
   "homepage": "https://github.com/izzyjosh/insighta-backend#readme",
   "dependencies": {
+    "axios": "^1.15.2",
     "cors": "^2.8.6",
+    "crypto": "^1.0.1",
     "dotenv": "^17.4.1",
     "express": "^5.2.1",
     "http-status-codes": "^2.3.0",
     "i18n-iso-countries": "^7.14.0",
+
+    "jsonwebtoken": "^9.0.3",
     "pg": "^8.20.0",
     "pino": "^10.3.1",
     "pino-http": "^11.0.0",
@@ -42,6 +46,7 @@
     "@eslint/js": "^10.0.1",
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.6",
+    "@types/jsonwebtoken": "^9.0.10",
     "@types/morgan": "^1.9.10",
     "@types/node": "^25.6.0",
     "@typescript-eslint/eslint-plugin": "^8.58.1",

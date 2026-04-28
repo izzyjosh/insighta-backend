@@ -10,6 +10,17 @@ export const envSchema = z.object({
     .string()
     .url('REDIS_URL must be a valid URL')
     .default('redis://localhost:6379'),
+  GITHUB_CLIENT_SECRET: z.string().min(32).max(256),
+  GITHUB_CLIENT_ID: z.string().min(20).max(256),
+  BASE_URL: z
+    .string()
+    .url('BASE_URL must be a valid URL')
+    .default('http://localhost:3000'),
+  FRONTEND_URL: z
+    .string()
+    .url('FRONTEND_URL must be a valid URL')
+    .default('http://localhost:5000'),
+  JWT_SECRET: z.string().min(32).max(256),
 });
 
 const env = envSchema.parse(process.env);
@@ -18,4 +29,15 @@ export const config = {
   port: env.PORT,
   databaseUrl: env.DATABASE_URL,
   redisUrl: env.REDIS_URL,
+  github: {
+    clientSecret: env.GITHUB_CLIENT_SECRET,
+    clientId: env.GITHUB_CLIENT_ID,
+  },
+  url: {
+    base: env.BASE_URL,
+    frontend: env.FRONTEND_URL,
+  },
+  secret: {
+    jwtsecret: env.JWT_SECRET,
+  },
 };

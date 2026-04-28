@@ -6,6 +6,7 @@ import {
 } from './middlewares/errors.handlers';
 import { StatusCodes } from 'http-status-codes';
 import profileRouter from './routes/profile';
+import { authRouter } from './routes/auth';
 import cors from 'cors';
 import { config } from './config/config';
 import { AppDataSource } from './config/datasource';
@@ -26,6 +27,7 @@ app.use(
 app.use(httpLogger);
 
 app.use('/api/', profileRouter);
+app.use('/api/auth', authRouter);
 app.get('/', (req, res) => {
   const response = {
     status: 'success',
