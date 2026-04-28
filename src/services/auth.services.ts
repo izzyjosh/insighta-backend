@@ -27,10 +27,19 @@ class AuthService {
       EX: 600, // Expires in 5 minutes
     });
 
-    const url = `
-        https://github.com/login/oauth/authorize?client_id=${config.github.clientId}&redirect_uri=${config.url.base}/api/auth/github/callback&state=${state}&code_challenge=${codeChallenge}&code_challenge_method=S256
-        `;
-    return url;
+    const redirectUri = new URL(
+      '/api/auth/github/callback',
+      config.url.base,
+    ).toString();
+    const url = new URL('https://github.com/login/oauth/authorize');
+
+    url.searchParams.set('client_id', config.github.clientId);
+    url.searchParams.set('redirect_uri', redirectUri);
+    url.searchParams.set('state', state);
+    url.searchParams.set('code_challenge', codeChallenge);
+    url.searchParams.set('code_challenge_method', 'S256');
+
+    return url.toString();
   }
 
   async githubCallback(code: string, state: string) {
@@ -39,7 +48,7 @@ class AuthService {
       throw new Error('Invalid or expired state parameter');
     }
 
-    const { codeVerifier } = JSON.parse(data);
+    const codeVerifier = data;
 
     await redisClient.del(`oauth:${state}`);
 
@@ -80,6 +89,7 @@ class AuthService {
         username,
         email,
         avatar_url,
+        last_login: new Date(),
       });
       user.is_active = true;
       await this.userRepository.save(user);

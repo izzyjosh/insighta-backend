@@ -137,6 +137,74 @@ class ProfileController {
       next(error);
     }
   }
+
+  async exportProfiles(
+    req: ValidatedRequest<never, FilterQueryDTO>,
+    res: Response,
+    next: NextFunction,
+  ): Promise<void> {
+    try {
+      const validatedQuery = req.validatedQuery?.success
+        ? req.validatedQuery.data
+        : undefined;
+      if (!validatedQuery) {
+        next(new BadRequestError('Invalid query parameters'));
+        return;
+      }
+
+      const profiles = await profileService.exportProfiles(validatedQuery);
+
+      const pad = (n: number) => String(n).padStart(2, '0');
+      const d = new Date();
+      const ts = `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(
+        d.getDate(),
+      )}_${pad(d.getHours())}${pad(d.getMinutes())}${pad(d.getSeconds())}`;
+      const filename = `profiles_${ts}.csv`;
+
+      const escapeCsv = (v: unknown) => {
+        if (v === null || v === undefined) return '';
+        const s = String(v);
+        if (s.includes(',') || s.includes('"') || s.includes('\n')) {
+          return `"${s.replace(/"/g, '""')}"`;
+        }
+        return s;
+      };
+
+      const columns = [
+        'id',
+        'name',
+        'gender',
+        'gender_probability',
+        'age',
+        'age_group',
+        'country_id',
+        'country_name',
+        'country_probability',
+        'created_at',
+      ] as const;
+
+      type CsvColumn = (typeof columns)[number];
+      const rowValues = profiles as Array<
+        Record<CsvColumn, string | number | Date>
+      >;
+
+      const header = columns.join(',');
+      const rows = rowValues.map((profile) =>
+        columns.map((column) => escapeCsv(profile[column])).join(','),
+      );
+
+      const csv = [header, ...rows].join('\n');
+
+      res.setHeader('Content-Type', 'text/csv');
+      res.setHeader(
+        'Content-Disposition',
+        `attachment; filename="${filename}"`,
+      );
+      res.status(StatusCodes.OK).send(csv);
+    } catch (error) {
+      next(error);
+    }
+  }
 }
 
 export const profileController = new ProfileController();

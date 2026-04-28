@@ -14,8 +14,8 @@ const profileRouter = Router();
 
 profileRouter.post(
   '/',
-  validateRequest(),
   requireRole('admin'),
+  validateRequest(),
   (req, res, next) => {
     profileController.classify(req, res, next);
   },
@@ -37,12 +37,27 @@ profileRouter.get(
   },
 );
 
-profileRouter.get('/:id', (req: Request<{ id: string }>, res: Response, next: NextFunction) => {
-  profileController.getProfile(req, res, next);
-});
+profileRouter.get(
+  '/export',
+  validateQueryParams(filterQuerySchema),
+  (req, res, next) => {
+    profileController.exportProfiles(req, res, next);
+  },
+);
 
-profileRouter.delete('/:id', requireRole('admin'), (req: Request<{ id: string }>, res: Response, next: NextFunction) => {
-  profileController.deleteProfile(req, res, next);
-});
+profileRouter.get(
+  '/:id',
+  (req: Request<{ id: string }>, res: Response, next: NextFunction) => {
+    profileController.getProfile(req, res, next);
+  },
+);
+
+profileRouter.delete(
+  '/:id',
+  requireRole('admin'),
+  (req: Request<{ id: string }>, res: Response, next: NextFunction) => {
+    profileController.deleteProfile(req, res, next);
+  },
+);
 
 export default profileRouter;

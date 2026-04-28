@@ -231,13 +231,27 @@ class ProfileService {
     const profilesMap: ProfileResponseDTO[] = profiles.map((profile: Profile) =>
       profileResponseSchema.parse(profile),
     );
-    
+
     return {
       profiles: profilesMap,
       page: filters.page,
       limit: filters.limit,
       total: total,
     };
+  }
+
+  async exportProfiles(filters: FilterQueryDTO) {
+    const baseQuery = this.profileRepository.createQueryBuilder('profile');
+
+    const filteredQuery = await this.applyFilters(baseQuery, filters);
+
+    const orderedQuery = filteredQuery
+      .clone()
+      .orderBy(filters.sort_by, filters.order);
+
+    const data = await orderedQuery.getMany();
+
+    return data.map((profile) => profileResponseSchema.parse(profile));
   }
 
   async deleteProfile(id: string) {
