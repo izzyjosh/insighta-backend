@@ -28,6 +28,7 @@ jobs:
     if: github.event.pull_request.draft == false && github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
       - name: Enable PR auto-merge
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
