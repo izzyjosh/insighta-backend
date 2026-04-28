@@ -10,6 +10,8 @@ import { authRouter } from './routes/auth';
 import cors from 'cors';
 import { config } from './config/config';
 import { AppDataSource } from './config/datasource';
+import { authMiddleware } from './middlewares/authMiddleware';
+import { apiVersion } from './middlewares/versionMiddleware';
 
 const port = config.port;
 
@@ -26,8 +28,10 @@ app.use(
 
 app.use(httpLogger);
 
-app.use('/api/', profileRouter);
+
 app.use('/api/auth', authRouter);
+app.use('/api/profiles', authMiddleware, apiVersion, profileRouter);
+
 app.get('/', (req, res) => {
   const response = {
     status: 'success',

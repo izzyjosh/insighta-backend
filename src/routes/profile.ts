@@ -11,12 +11,12 @@ import {
 
 const profileRouter = Router();
 
-profileRouter.post('/profiles', validateRequest(), (req, res, next) => {
+profileRouter.post('/', validateRequest(), (req, res, next) => {
   profileController.classify(req, res, next);
 });
 
 profileRouter.get(
-  '/profiles',
+  '/',
   validateQueryParams(filterQuerySchema),
   (req, res, next) => {
     profileController.allProfiles(req, res, next);
@@ -24,18 +24,18 @@ profileRouter.get(
 );
 
 profileRouter.get(
-  '/profiles/search',
+  '/search',
   validateQueryParams(naturalSearchSchema),
   (req, res, next) => {
     profileController.naturalSearch(req, res, next);
   },
 );
 
-profileRouter.get('/profiles/:id', (req, res, next) => {
+profileRouter.get('/:id', (req, res, next) => {
   profileController.getProfile(req, res, next);
 });
 
-profileRouter.delete('/profiles/:id', (req, res, next) => {
+profileRouter.delete('/:id', (req, res, next) => {
   profileController.deleteProfile(req, res, next);
 });
 
