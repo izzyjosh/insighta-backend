@@ -1,4 +1,10 @@
-import { BeforeInsert, Column, CreateDateColumn, Entity, PrimaryColumn } from 'typeorm';
+import {
+  BeforeInsert,
+  Column,
+  CreateDateColumn,
+  Entity,
+  PrimaryColumn,
+} from 'typeorm';
 import { uuidv7 } from 'uuidv7';
 
 export enum UserRole {
@@ -8,7 +14,7 @@ export enum UserRole {
 
 @Entity()
 export class User {
-  @PrimaryColumn("uuid")
+  @PrimaryColumn('uuid')
   id!: string;
 
   @Column({ type: 'varchar', unique: true })
@@ -29,14 +35,14 @@ export class User {
   @Column({ type: 'boolean', default: false })
   is_active!: boolean;
 
-  @Column({type: 'timestamp'})
+  @Column({ type: 'timestamp' })
   last_login!: Date;
 
   @CreateDateColumn({ type: 'timestamp' })
   created_at!: Date;
 
   @BeforeInsert()
-    generateId() {
+  generateId() {
     this.id = uuidv7();
   }
 }
