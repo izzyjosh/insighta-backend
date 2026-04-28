@@ -48,3 +48,9 @@ export class ForbiddenError extends ApiError {
     super(message, StatusCodes.FORBIDDEN);
   }
 }
+
+export class TooManyRequestsError extends ApiError {
+  constructor(message: string = 'Too Many Requests') {
+    super(message, StatusCodes.TOO_MANY_REQUESTS);
+  }
+}

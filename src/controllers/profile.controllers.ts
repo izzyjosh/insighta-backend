@@ -181,17 +181,25 @@ class ProfileController {
         'country_name',
         'country_probability',
         'created_at',
-      ];
+      ] as const;
+
+      type CsvColumn = (typeof columns)[number];
+      const rowValues = profiles as Array<
+        Record<CsvColumn, string | number | Date>
+      >;
 
       const header = columns.join(',');
-      const rows = profiles.map((p) =>
-        columns.map((c) => escapeCsv((p as any)[c])).join(','),
+      const rows = rowValues.map((profile) =>
+        columns.map((column) => escapeCsv(profile[column])).join(','),
       );
 
       const csv = [header, ...rows].join('\n');
 
       res.setHeader('Content-Type', 'text/csv');
-      res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+      res.setHeader(
+        'Content-Disposition',
+        `attachment; filename="${filename}"`,
+      );
       res.status(StatusCodes.OK).send(csv);
     } catch (error) {
       next(error);

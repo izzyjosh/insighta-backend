@@ -1,5 +1,5 @@
 import express from 'express';
-import sysLogger, { httpLogger } from './utils/logger';
+import sysLogger, { requestLogger } from './utils/logger';
 import {
   NotFoundErrorHandler,
   RequestErrorHandler,
@@ -12,6 +12,7 @@ import { config } from './config/config';
 import { AppDataSource } from './config/datasource';
 import { authMiddleware } from './middlewares/authMiddleware';
 import { apiVersion } from './middlewares/versionMiddleware';
+import { authRateLimit, userRateLimit } from './middlewares/rateLimit';
 
 const port = config.port;
 
@@ -26,10 +27,16 @@ app.use(
   }),
 );
 
-app.use(httpLogger);
+app.use(requestLogger);
 
-app.use('/api/auth', authRouter);
-app.use('/api/profiles', authMiddleware, apiVersion, profileRouter);
+app.use('/api/auth', authRateLimit, authRouter);
+app.use(
+  '/api/profiles',
+  authMiddleware,
+  userRateLimit,
+  apiVersion,
+  profileRouter,
+);
 
 app.get('/', (req, res) => {
   const response = {

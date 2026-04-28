@@ -27,7 +27,10 @@ class AuthService {
       EX: 600, // Expires in 5 minutes
     });
 
-    const redirectUri = new URL('/api/auth/github/callback', config.url.base).toString();
+    const redirectUri = new URL(
+      '/api/auth/github/callback',
+      config.url.base,
+    ).toString();
     const url = new URL('https://github.com/login/oauth/authorize');
 
     url.searchParams.set('client_id', config.github.clientId);
