@@ -44,7 +44,7 @@ export const authMiddleware = async (
       return next(new ForbiddenError('Forbidden'));
     }
     next();
-  } catch (error) {
+  } catch {
     return next(new ForbiddenError('Invalid token'));
   }
 };

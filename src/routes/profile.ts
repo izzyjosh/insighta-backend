@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Router, Request, Response, NextFunction } from 'express';
 import {
   validateRequest,
   validateQueryParams,
@@ -37,11 +37,11 @@ profileRouter.get(
   },
 );
 
-profileRouter.get('/:id', (req, res, next) => {
+profileRouter.get('/:id', (req: Request<{ id: string }>, res: Response, next: NextFunction) => {
   profileController.getProfile(req, res, next);
 });
 
-profileRouter.delete('/:id', requireRole('admin'), (req, res, next) => {
+profileRouter.delete('/:id', requireRole('admin'), (req: Request<{ id: string }>, res: Response, next: NextFunction) => {
   profileController.deleteProfile(req, res, next);
 });
 

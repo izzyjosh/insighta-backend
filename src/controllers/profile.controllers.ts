@@ -96,12 +96,12 @@ class ProfileController {
   }
 
   async deleteProfile(
-    req: Request,
+    req: Request<{ id: string }>,
     res: Response,
     next: NextFunction,
   ): Promise<void> {
     try {
-      const id = (req as any).params?.id;
+      const id = req.params.id;
       await profileService.deleteProfile(id);
       res.status(StatusCodes.NO_CONTENT).send();
     } catch (error) {

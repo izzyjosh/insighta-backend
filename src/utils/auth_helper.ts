@@ -31,6 +31,10 @@ export function verifyToken(token: string) {
   try {
     return jwt.verify(token, config.secret.jwtsecret) as User;
   } catch (error) {
-    throw new Error('Invalid or expired token');
+    const wrappedError = new Error('Invalid or expired token') as Error & {
+      cause?: unknown;
+    };
+    wrappedError.cause = error;
+    throw wrappedError;
   }
 }
