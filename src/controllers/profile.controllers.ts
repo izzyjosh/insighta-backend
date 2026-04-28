@@ -88,6 +88,7 @@ class ProfileController {
           limit: response.limit,
           total: response.total,
           data: response.profiles,
+          requestPath: req.originalUrl,
         }),
       );
     } catch (error) {
@@ -129,6 +130,7 @@ class ProfileController {
           page: results.page,
           limit: results.limit,
           total: results.total,
+          requestPath: req.originalUrl,
         }),
       );
     } catch (error) {
