@@ -24,8 +24,8 @@ export class RefreshToken {
   @Column({ type: 'boolean', default: false })
   revoked!: boolean;
 
-  @Column({ type: 'timestamp' })
-  revoked_at!: Date;
+  @Column({ type: 'timestamp', nullable: true, default: null })
+  revoked_at!: Date | null;
 
   @CreateDateColumn({ type: 'timestamp' })
   created_at!: Date;

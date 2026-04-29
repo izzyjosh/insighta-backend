@@ -23,11 +23,16 @@ export const authMiddleware = async (
   next: NextFunction,
 ) => {
   const authHeader = req.headers.authorization;
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    return next(new ForbiddenError('Invalid token'));
+  let token: string | undefined;
+
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    token = authHeader.split(' ')[1];
   }
 
-  const token = authHeader.split(' ')[1];
+  if (!token) {
+    token = (req.cookies as { accessToken?: string } | undefined)?.accessToken;
+  }
+
   if (!token) {
     return next(new ForbiddenError('Invalid token'));
   }
