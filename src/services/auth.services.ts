@@ -8,6 +8,7 @@ import {
   generateToken,
   hash,
 } from '../utils/auth_helper';
+import { verifyToken } from '../utils/auth_helper';
 import crypto from 'crypto';
 import { redisClient } from '../config/redis';
 import axios from 'axios';
@@ -17,8 +18,20 @@ class AuthService {
   private readonly userRepository = AppDataSource.getRepository(User);
   private readonly refreshTokenRepository =
     AppDataSource.getRepository(RefreshToken);
+  private readonly refreshTokenLifetimeMs = 5 * 60 * 1000;
 
-  async githubRedirect(): Promise<string> {
+  private async issueRefreshToken(userId: string, refreshToken: string) {
+    const token = this.refreshTokenRepository.create({
+      user_id: userId,
+      token_hash: hash(refreshToken),
+      expires_at: new Date(Date.now() + this.refreshTokenLifetimeMs),
+      revoked: false,
+    });
+
+    await this.refreshTokenRepository.save(token);
+  }
+
+  async githubRedirect(source: string | null = null): Promise<string> {
     const state = crypto.randomBytes(16).toString('hex');
     const codeVerifier = generateCodeVerifier();
     const codeChallenge = generateCodeChallenge(codeVerifier);
@@ -28,7 +41,7 @@ class AuthService {
     });
 
     const redirectUri = new URL(
-      '/api/auth/github/callback',
+      '/api/auth/github/callback?source=' + encodeURIComponent(source || ''),
       config.url.base,
     ).toString();
     const url = new URL('https://github.com/login/oauth/authorize');
@@ -111,11 +124,7 @@ class AuthService {
 
     const { token, refreshToken } = generateToken(payload);
 
-    await this.refreshTokenRepository.create({
-      user_id: user.id,
-      token_hash: hash(refreshToken),
-      expires_at: new Date(Date.now() + 5 * 1000),
-    });
+    await this.issueRefreshToken(user.id, refreshToken);
 
     return { token, refreshToken, user: UserSchema.parse(user) };
   }
@@ -151,11 +160,7 @@ class AuthService {
       role: user.role,
     };
     const { token, refreshToken } = generateToken(payload);
-    await this.refreshTokenRepository.create({
-      user_id: user.id,
-      token_hash: hash(refreshToken),
-      expires_at: new Date(Date.now() + 5 * 1000),
-    });
+    await this.issueRefreshToken(user.id, refreshToken);
 
     return { token, refreshToken };
   }
@@ -169,6 +174,29 @@ class AuthService {
       storedToken.revoked = true;
       storedToken.revoked_at = new Date();
       await this.refreshTokenRepository.save(storedToken);
+    }
+  }
+
+  async getUserFromToken(token: string) {
+    try {
+      const decoded = verifyToken(token) as { id: string };
+      const user = await this.userRepository.findOne({
+        where: { id: decoded.id },
+      });
+      if (!user) {
+        throw new Error('User not found');
+      }
+      return UserSchema.parse(user);
+    } catch (error: unknown) {
+      const err = new Error('Failed to create profile');
+
+      if (error instanceof Error) {
+        (err as Error & { cause?: unknown }).cause = error;
+      } else {
+        (err as Error & { cause?: unknown }).cause = error;
+      }
+
+      throw err;
     }
   }
 }

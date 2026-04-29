@@ -9,6 +9,9 @@ authRouter.get('/github', async (req, res, next) => {
 authRouter.get('/github/callback', async (req, res, next) => {
   authController.githubCallback(req, res, next);
 });
+authRouter.get('/me', async (req, res, next) => {
+  authController.getMe(req, res, next);
+});
 authRouter.post('/refresh', async (req, res, next) => {
   authController.refreshToken(req, res, next);
 });

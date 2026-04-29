@@ -13,17 +13,32 @@ import { AppDataSource } from './config/datasource';
 import { authMiddleware } from './middlewares/authMiddleware';
 import { apiVersion } from './middlewares/versionMiddleware';
 import { authRateLimit, userRateLimit } from './middlewares/rateLimit';
+import cookieParser from 'cookie-parser';
 
 const port = config.port;
 
 const app = express();
+app.set('etag', false);
 
 app.use(express.json());
+app.use(cookieParser());
 app.use(express.urlencoded({ extended: true }));
+
+app.use('/api', (req, res, next) => {
+  res.setHeader(
+    'Cache-Control',
+    'no-store, no-cache, must-revalidate, proxy-revalidate',
+  );
+  res.setHeader('Pragma', 'no-cache');
+  res.setHeader('Expires', '0');
+  res.removeHeader('ETag');
+  next();
+});
 
 app.use(
   cors({
-    origin: '*',
+    origin: config.url.frontend,
+    credentials: true,
   }),
 );
 

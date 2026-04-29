@@ -19,8 +19,11 @@ export const envSchema = z.object({
   FRONTEND_URL: z
     .string()
     .url('FRONTEND_URL must be a valid URL')
-    .default('http://localhost:5000'),
+    .default('http://localhost:3000'),
   JWT_SECRET: z.string().min(32).max(256),
+  NODE_ENV: z
+    .enum(['development', 'production', 'test'])
+    .default('development'),
 });
 
 const env = envSchema.parse(process.env);
@@ -40,4 +43,5 @@ export const config = {
   secret: {
     jwtsecret: env.JWT_SECRET,
   },
+  nodeEnv: env.NODE_ENV,
 };
