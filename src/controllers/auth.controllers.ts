@@ -99,11 +99,12 @@ class AuthController {
       });
 
       res.status(200).json(
-        {
-          status: "success",
-          access_token: result.token,
-          refresh_token: result.refreshToken,
-        }
+        successResponse({
+          data: {
+            access_token: result.token,
+            refresh_token: result.refreshToken,
+          },
+        })
       );
     } catch (error) {
       next(error);
