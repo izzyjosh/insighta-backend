@@ -74,16 +74,16 @@ class AuthController {
   ): Promise<void> {
     try {
       // Allow refresh token to be provided either in the request body or in an httpOnly cookie
-      let { refreshToken } = req.body as { refreshToken?: string };
-      if (typeof refreshToken !== 'string') {
-        refreshToken = (req.cookies as { refreshToken?: string })?.refreshToken;
+      let { refresh_token } = req.body as { refresh_token?: string };
+      if (typeof refresh_token !== 'string') {
+        refresh_token = (req.cookies as { refresh_token?: string })?.refresh_token;
       }
 
-      if (typeof refreshToken !== 'string') {
+      if (typeof refresh_token !== 'string') {
         throw new BadRequestError('Invalid refresh token');
       }
 
-      const result = await authService.refreshToken(refreshToken);
+      const result = await authService.refreshToken(refresh_token);
 
       // Set new tokens as httpOnly cookies for browser clients
       res.cookie('accessToken', result.token, {
