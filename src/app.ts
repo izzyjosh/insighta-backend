@@ -45,6 +45,19 @@ app.use(
 app.use(requestLogger);
 
 app.use('/api/auth', authRateLimit, authRouter);
+
+// Add /api/users/me endpoint for API compatibility
+app.get(
+  '/api/users/me',
+  authMiddleware,
+  userRateLimit,
+  apiVersion,
+  async (req, res, next) => {
+    const { authController } = require('./controllers/auth.controllers');
+    authController.getMe(req, res, next);
+  },
+);
+
 app.use(
   '/api/profiles',
   authMiddleware,
@@ -61,9 +74,11 @@ app.get('/', (req, res) => {
   res.status(StatusCodes.OK).json(response);
 });
 
-// Error handlers middlewares
-app.use(NotFoundErrorHandler);
+// Error handlers middleware (MUST be last)
+// RequestErrorHandler catches APIError and returns appropriate status codes (401, 403, 404, etc.)
+// NotFoundErrorHandler returns 404 as a fallback
 app.use(RequestErrorHandler);
+app.use(NotFoundErrorHandler);
 
 (async () => {
   try {

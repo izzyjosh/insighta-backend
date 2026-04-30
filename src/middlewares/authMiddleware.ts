@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import { ForbiddenError } from '../utils/api.errors';
+import { ForbiddenError, UnauthorizedError } from '../utils/api.errors';
 import { verifyToken } from '../utils/auth_helper';
 import { User } from '../models/User.model';
 import { AppDataSource } from '../config/datasource';
@@ -34,30 +34,33 @@ export const authMiddleware = async (
   }
 
   if (!token) {
-    return next(new ForbiddenError('Invalid token'));
+    return next(new UnauthorizedError('No token provided'));
   }
   try {
     const payload = verifyToken(token);
 
     if (!payload) {
-      return next(new ForbiddenError('Invalid token'));
+      return next(new UnauthorizedError('Invalid token'));
     }
     req.user = payload;
 
     const user = await userRepo.findOneBy({ id: payload.id });
     if (!user?.is_active) {
-      return next(new ForbiddenError('Forbidden'));
+      return next(new ForbiddenError('User account is inactive'));
     }
     next();
   } catch {
-    return next(new ForbiddenError('Invalid token'));
+    return next(new UnauthorizedError('Invalid or expired token'));
   }
 };
 
 export function requireRole(role: string) {
   return (req: AuthRequest, res: Response, next: NextFunction) => {
-    if (!req.user || req.user.role !== role) {
-      return res.status(403).json({ error: 'Forbidden' });
+    if (!req.user) {
+      return next(new UnauthorizedError('No token provided'));
+    }
+    if (req.user.role !== role) {
+      return next(new ForbiddenError('Insufficient permissions'));
     }
     next();
   };

@@ -54,3 +54,9 @@ export class TooManyRequestsError extends ApiError {
     super(message, StatusCodes.TOO_MANY_REQUESTS);
   }
 }
+
+export class UnauthorizedError extends ApiError {
+  constructor(message: string = 'Unauthorized') {
+    super(message, StatusCodes.UNAUTHORIZED);
+  }
+}
