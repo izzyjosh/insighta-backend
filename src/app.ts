@@ -45,7 +45,7 @@ app.use(
 
 app.use(requestLogger);
 
-app.use('/api/auth', authRateLimit, authRouter);
+app.use('/auth', authRateLimit, authRouter);
 
 // Add /api/users/me endpoint for API compatibility
 app.get(

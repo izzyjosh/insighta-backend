@@ -42,7 +42,7 @@ class AuthService {
     });
 
     const redirectUri = new URL(
-      '/api/auth/github/callback?source=' + encodeURIComponent(source || ''),
+      '/auth/github/callback?source=' + encodeURIComponent(source || ''),
       config.url.base,
     ).toString();
     const url = new URL('https://github.com/login/oauth/authorize');
