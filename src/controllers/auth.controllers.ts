@@ -56,6 +56,12 @@ class AuthController {
         );
         return;
       }
+
+      res.status(200).json(
+        successResponse({
+          data: result,
+        }),
+      );
     } catch (error) {
       next(error);
     }

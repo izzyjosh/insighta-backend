@@ -13,6 +13,7 @@ import crypto from 'crypto';
 import { redisClient } from '../config/redis';
 import axios from 'axios';
 import { UserSchema } from '../schemas/user.schemas';
+import { BadRequestError } from '../utils/api.errors';
 
 class AuthService {
   private readonly userRepository = AppDataSource.getRepository(User);
@@ -56,13 +57,18 @@ class AuthService {
   }
 
   async githubCallback(code: string, state: string) {
-    const data = await redisClient.get(`oauth:${state}`);
-    if (!data) {
-      throw new Error('Invalid or expired state parameter');
+    // Validate code and state parameters
+    if (!code || !state) {
+      throw new BadRequestError('Missing code or state');
     }
 
-    const codeVerifier = data;
+    // Retrieve and validate code_verifier from Redis (PKCE)
+    const codeVerifier = await redisClient.get(`oauth:${state}`);
+    if (!codeVerifier) {
+      throw new BadRequestError('Invalid or expired state parameter');
+    }
 
+    // Clean up the state from Redis (single-use)
     await redisClient.del(`oauth:${state}`);
 
     const tokenResponse = await axios.post(
