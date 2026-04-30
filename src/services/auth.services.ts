@@ -56,7 +56,6 @@ class AuthService {
     return url.toString();
   }
 
-
   async githubCallback(code: string, state: string) {
     // Validate code and state parameters
     if (!code || !state) {
@@ -71,7 +70,6 @@ class AuthService {
 
     // Clean up the state from Redis (single-use)
     await redisClient.del(`oauth:${state}`);
-    
 
     const tokenResponse = await axios.post(
       'https://github.com/login/oauth/access_token',

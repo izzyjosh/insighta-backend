@@ -14,6 +14,7 @@ import { authMiddleware } from './middlewares/authMiddleware';
 import { apiVersion } from './middlewares/versionMiddleware';
 import { authRateLimit, userRateLimit } from './middlewares/rateLimit';
 import cookieParser from 'cookie-parser';
+import { authController } from './controllers/auth.controllers';
 
 const port = config.port;
 
@@ -53,7 +54,6 @@ app.get(
   userRateLimit,
   apiVersion,
   async (req, res, next) => {
-    const { authController } = require('./controllers/auth.controllers');
     authController.getMe(req, res, next);
   },
 );
