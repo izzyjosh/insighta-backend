@@ -3,6 +3,7 @@ import { authService } from '../services/auth.services';
 import { successResponse } from '../utils/responses';
 import { BadRequestError } from '../utils/api.errors';
 import { config } from '../config/config';
+import { refreshTokenSchema } from '../schemas/auth.schema';
 
 class AuthController {
   async github(req: Request, res: Response, next: NextFunction): Promise<void> {
@@ -74,16 +75,9 @@ class AuthController {
   ): Promise<void> {
     try {
       // Allow refresh token to be provided either in the request body or in an httpOnly cookie
-      let { refreshToken } = req.body as { refreshToken?: string };
-      if (typeof refreshToken !== 'string') {
-        refreshToken = (req.cookies as { refreshToken?: string })?.refreshToken;
-      }
+      const { refresh_token } = refreshTokenSchema.parse(req.body);
 
-      if (typeof refreshToken !== 'string') {
-        throw new BadRequestError('Invalid refresh token');
-      }
-
-      const result = await authService.refreshToken(refreshToken);
+      const result = await authService.refreshToken(refresh_token);
 
       // Set new tokens as httpOnly cookies for browser clients
       res.cookie('accessToken', result.token, {
@@ -104,7 +98,7 @@ class AuthController {
             access_token: result.token,
             refresh_token: result.refreshToken,
           },
-        })
+        }),
       );
     } catch (error) {
       next(error);
@@ -113,12 +107,12 @@ class AuthController {
 
   async logout(req: Request, res: Response, next: NextFunction): Promise<void> {
     try {
-      const { refreshToken } = req.body;
-      if (typeof refreshToken !== 'string') {
-        throw new BadRequestError('Invalid refresh token');
+      const refreshToken = (req.cookies as { refreshToken?: string })
+        .refreshToken;
+      if (!refreshToken) {
+        throw new BadRequestError('No refresh token provided');
       }
       await authService.logout(refreshToken);
-
       // Clear authentication cookies
       res.clearCookie('accessToken', {
         httpOnly: true,
