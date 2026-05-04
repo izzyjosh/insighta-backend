@@ -1,9 +1,9 @@
 import { Request, Response, NextFunction } from 'express';
-
 import { profileService } from '../services/genderize.services';
 import { BadRequestError } from '../utils/api.errors';
 import { successResponse } from '../utils/responses';
 import { StatusCodes } from 'http-status-codes';
+import { uuidSchema } from '../schemas/profile.schemas';
 
 import {
   FilterQueryDTO,
@@ -56,7 +56,12 @@ class ProfileController {
   ): Promise<void> {
     try {
       const id = req.params?.id;
-      const result = await profileService.getProfile(id);
+      const validatedId = uuidSchema.safeParse(id);
+      if (!validatedId.success) {
+        next(new BadRequestError('Invalid profile ID format'));
+        return;
+      }
+      const result = await profileService.getProfile(validatedId.data);
 
       res
         .status(StatusCodes.OK)
@@ -103,7 +108,12 @@ class ProfileController {
   ): Promise<void> {
     try {
       const id = req.params.id;
-      await profileService.deleteProfile(id);
+      const validatedId = uuidSchema.safeParse(id);
+      if (!validatedId.success) {
+        next(new BadRequestError('Invalid profile ID format'));
+        return;
+      }
+      await profileService.deleteProfile(validatedId.data);
       res.status(StatusCodes.NO_CONTENT).send();
     } catch (error) {
       next(error);

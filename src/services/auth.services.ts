@@ -19,7 +19,7 @@ class AuthService {
   private readonly userRepository = AppDataSource.getRepository(User);
   private readonly refreshTokenRepository =
     AppDataSource.getRepository(RefreshToken);
-  private readonly refreshTokenLifetimeMs = 24 * 60 * 60 * 1000;
+  private readonly refreshTokenLifetimeMs = 5 * 60 * 1000;
 
   private async issueRefreshToken(userId: string, refreshToken: string) {
     const token = this.refreshTokenRepository.create({

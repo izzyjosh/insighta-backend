@@ -12,7 +12,7 @@ export const createProfileSchema = z.object({
 });
 
 export const profileResponseSchema = createProfileSchema.extend({
-  id: z.string(),
+  id: z.uuidv7(),
   created_at: z.date(),
 });
 
@@ -78,3 +78,5 @@ export const naturalSearchSchema = z.object({
 });
 
 export type NaturalSearchDTO = z.infer<typeof naturalSearchSchema>;
+
+export const uuidSchema = z.uuidv7({ message: 'Invalid UUID format' })

@@ -18,7 +18,7 @@ type User = {
 };
 
 export function generateToken(user: User) {
-  const token = jwt.sign(user, config.secret.jwtsecret, { expiresIn: '3h' });
+  const token = jwt.sign(user, config.secret.jwtsecret, { expiresIn: '3m' });
   const refreshToken = crypto.randomBytes(64).toString('hex');
   return { token, refreshToken };
 }
