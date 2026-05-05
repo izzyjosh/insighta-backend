@@ -4,6 +4,7 @@ import {
   CreateDateColumn,
   Entity,
   PrimaryColumn,
+  Index,
 } from 'typeorm';
 import { uuidv7 } from 'uuidv7';
 
@@ -24,9 +25,11 @@ export class Profile {
   id!: string;
 
   @Column({ type: 'varchar', unique: true })
+  @Index()
   name!: string;
 
   @Column({ type: 'enum', enum: Gender })
+  @Index()
   gender!: Gender;
 
   @Column({ type: 'float' })
@@ -36,9 +39,11 @@ export class Profile {
   age!: number;
 
   @Column({ type: 'enum', enum: AgeGroup })
+  @Index()
   age_group!: AgeGroup;
 
   @Column({ type: 'varchar', length: 2 })
+  @Index()
   country_id!: string;
 
   @Column({ type: 'varchar' })
