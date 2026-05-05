@@ -133,7 +133,8 @@ class ProfileController {
         next(new BadRequestError('Invalid query parameters'));
         return;
       }
-      const results = await profileService.naturalSearch(validatedQuery);
+      const results: Awaited<ReturnType<typeof profileService.naturalSearch>> =
+        await profileService.naturalSearch(validatedQuery);
       res.status(StatusCodes.OK).json(
         successResponse<ProfileResponseDTO[]>({
           data: results.profiles,

@@ -19,7 +19,7 @@ import { SelectQueryBuilder } from 'typeorm';
 import { parseNaturalQuery } from '../utils/natural-query-logic';
 import { cache } from '../utils/cacheDecorator';
 import { cacheService } from './cache.service';
-import { redisClient } from '../config/redis';
+import { getSearchCacheKey } from '../utils/normalize-search-filters';
 
 type ClassifyResult = {
   profile: ProfileResponseDTO;
@@ -29,6 +29,13 @@ type ClassifyResult = {
 
 type ProfileFilterCriteria = Omit<FilterQueryDTO, 'gender'> & {
   gender?: FilterQueryDTO['gender'] | Array<'male' | 'female'>;
+};
+
+type NaturalSearchResult = {
+  profiles: ProfileResponseDTO[];
+  page: number;
+  limit: number;
+  total: number;
 };
 
 countries.registerLocale(enLocale);
@@ -101,8 +108,8 @@ class ProfileService {
       });
 
     if (filters.min_gender_probability)
-      qb.andWhere('profile.gender_probabilty >= :min_gender_probabilty', {
-        min_gender_probabilty: filters.min_gender_probability,
+      qb.andWhere('profile.gender_probability >= :min_gender_probability', {
+        min_gender_probability: filters.min_gender_probability,
       });
 
     return qb;
@@ -301,13 +308,7 @@ class ProfileService {
     await cacheService.invalidatePattern('profiles:search:*');
   }
 
-  // Cache natural search (2 min - shorter TTL for dynamic search)
-  @cache({
-    ttl: 120,
-    key: (filters: NaturalSearchDTO) =>
-      `profiles:search:${filters.q}:${filters.page}`,
-  })
-  async naturalSearch(filters: NaturalSearchDTO) {
+  async naturalSearch(filters: NaturalSearchDTO): Promise<NaturalSearchResult> {
     const page = Math.max(filters.page, 1);
     const limit = Math.max(filters.limit, 1);
 
@@ -315,6 +316,17 @@ class ProfileService {
 
     const parseSearchQuery = parseNaturalQuery(filters.q);
 
+    // 2. Create a CANONICAL cache key from normalized filters
+    const cacheKey = getSearchCacheKey(parseSearchQuery, page);
+
+    // 3. Check cache FIRST
+    const cachedResult = await cacheService.get<NaturalSearchResult>(cacheKey);
+    if (cachedResult) {
+      logger.info(`Cache hit: ${cacheKey}`);
+      return cachedResult;
+    }
+
+    // 4. Cache miss → query the database
     const baseQuery = this.profileRepository.createQueryBuilder('profile');
 
     const naturalFilters: ProfileFilterCriteria = {
@@ -334,12 +346,16 @@ class ProfileService {
         : await filteredQuery.clone().getCount();
 
     const data = await filteredQuery.clone().skip(skip).take(limit).getMany();
-    return {
+    const result = {
       profiles: data.map((profile) => profileResponseSchema.parse(profile)),
       page: filters.page,
       limit: filters.limit,
       total,
     };
+    // 5. Store result in cache
+    await cacheService.set(cacheKey, result, 120); // 2 min TTL
+
+    return result;
   }
 }
 
