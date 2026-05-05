@@ -4,6 +4,7 @@ import { config } from './config';
 import { Profile } from '../models/Profile.models';
 import { User } from '../models/User.model';
 import { RefreshToken } from '../models/RefreshToken';
+import { minLength } from 'zod';
 
 export const AppDataSource = new DataSource({
   type: 'postgres',
@@ -13,7 +14,8 @@ export const AppDataSource = new DataSource({
     rejectUnauthorized: false,
   },
   extra: {
-    max: 10, // connection pool size (optional)
+    max: 25, // connection pool size (optional)
+    min: 5, // minimum connections in pool (optional)
   },
   logging: ['error'],
   entities: [Profile, User, RefreshToken],
