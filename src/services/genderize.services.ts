@@ -17,6 +17,8 @@ import {
 import { StatusCodes } from 'http-status-codes';
 import { SelectQueryBuilder } from 'typeorm';
 import { parseNaturalQuery } from '../utils/natural-query-logic';
+import { cache } from '../utils/cacheDecorator';
+import { cacheService } from './cache.service';
 
 type ClassifyResult = {
   profile: ProfileResponseDTO;
@@ -183,6 +185,9 @@ class ProfileService {
 
       await this.profileRepository.save(newProfile);
 
+      // Invalidate list cache
+      await cacheService.invalidatePattern('profiles:list:*');
+
       return {
         profile: profileResponseSchema.parse(newProfile),
         statusCode: StatusCodes.CREATED,
@@ -200,6 +205,11 @@ class ProfileService {
     }
   }
 
+  // Cache single profile lookups (5 min)
+  @cache({
+    ttl: 300,
+    key: (id: string) => `profile:${id}`,
+  })
   async getProfile(id: string) {
     const profile = await this.profileRepository.findOneBy({ id });
     if (!profile) {
@@ -209,6 +219,12 @@ class ProfileService {
     return profileResponseSchema.parse(profile);
   }
 
+  // Cache list queries (3 min)
+  @cache({
+    ttl: 180,
+    key: (filters: FilterQueryDTO) =>
+      `profiles:list:${JSON.stringify(filters)}`,
+  })
   async getAllProfiles(filters: FilterQueryDTO) {
     const page = Math.max(filters.page, 1);
     const limit = Math.max(filters.limit, 1);
@@ -260,8 +276,19 @@ class ProfileService {
       throw new NotFoundError('Profile not found');
     }
     await this.profileRepository.remove(profile);
+
+    // Invalidate caches
+    await cacheService.del(`profile:${id}`);
+    await cacheService.invalidatePattern('profiles:list:*');
+    await cacheService.invalidatePattern('profiles:search:*');
   }
 
+  // Cache natural search (2 min - shorter TTL for dynamic search)
+  @cache({
+    ttl: 120,
+    key: (filters: NaturalSearchDTO) =>
+      `profiles:search:${filters.q}:${filters.page}`,
+  })
   async naturalSearch(filters: NaturalSearchDTO) {
     const page = Math.max(filters.page, 1);
     const limit = Math.max(filters.limit, 1);
