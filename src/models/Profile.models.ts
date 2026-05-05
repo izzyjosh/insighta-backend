@@ -19,17 +19,16 @@ export enum AgeGroup {
   ADULT = 'adult',
   SENIOR = 'senior',
 }
+@Index(['gender', 'country_id', 'age_group'])
 @Entity()
 export class Profile {
   @PrimaryColumn('uuid')
   id!: string;
 
   @Column({ type: 'varchar', unique: true })
-  @Index()
   name!: string;
 
   @Column({ type: 'enum', enum: Gender })
-  @Index()
   gender!: Gender;
 
   @Column({ type: 'float' })
@@ -39,11 +38,9 @@ export class Profile {
   age!: number;
 
   @Column({ type: 'enum', enum: AgeGroup })
-  @Index()
   age_group!: AgeGroup;
 
   @Column({ type: 'varchar', length: 2 })
-  @Index()
   country_id!: string;
 
   @Column({ type: 'varchar' })

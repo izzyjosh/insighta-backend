@@ -4,7 +4,6 @@ import { config } from './config';
 import { Profile } from '../models/Profile.models';
 import { User } from '../models/User.model';
 import { RefreshToken } from '../models/RefreshToken';
-import { minLength } from 'zod';
 
 export const AppDataSource = new DataSource({
   type: 'postgres',

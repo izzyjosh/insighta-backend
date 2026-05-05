@@ -19,6 +19,7 @@ import { SelectQueryBuilder } from 'typeorm';
 import { parseNaturalQuery } from '../utils/natural-query-logic';
 import { cache } from '../utils/cacheDecorator';
 import { cacheService } from './cache.service';
+import { redisClient } from '../config/redis';
 
 type ClassifyResult = {
   profile: ProfileResponseDTO;
@@ -188,6 +189,18 @@ class ProfileService {
       // Invalidate list cache
       await cacheService.invalidatePattern('profiles:list:*');
 
+      // Maintain exact total counter and cache the new profile
+      try {
+        await cacheService.incr('profiles:total');
+        await cacheService.set(
+          `profile:${newProfile.id}`,
+          profileResponseSchema.parse(newProfile),
+          300,
+        );
+      } catch (e) {
+        logger.error(`Failed to update cache counter: ${e}`);
+      }
+
       return {
         profile: profileResponseSchema.parse(newProfile),
         statusCode: StatusCodes.CREATED,
@@ -242,7 +255,11 @@ class ProfileService {
       .take(limit)
       .getMany();
 
-    const total = await baseQuery.getCount();
+    const cachedTotal = await cacheService.getNumber('profiles:total');
+    const total =
+      cachedTotal !== null
+        ? cachedTotal
+        : await filteredQuery.clone().getCount();
 
     const profilesMap: ProfileResponseDTO[] = profiles.map((profile: Profile) =>
       profileResponseSchema.parse(profile),
@@ -277,6 +294,7 @@ class ProfileService {
     }
     await this.profileRepository.remove(profile);
 
+    await cacheService.decr('profiles:total'); // Decrement total counter
     // Invalidate caches
     await cacheService.del(`profile:${id}`);
     await cacheService.invalidatePattern('profiles:list:*');
@@ -309,7 +327,11 @@ class ProfileService {
 
     const filteredQuery = await this.applyFilters(baseQuery, naturalFilters);
 
-    const total = await baseQuery.getCount();
+    const cachedTotal = await cacheService.getNumber('profiles:total');
+    const total =
+      cachedTotal !== null
+        ? cachedTotal
+        : await filteredQuery.clone().getCount();
 
     const data = await filteredQuery.clone().skip(skip).take(limit).getMany();
     return {

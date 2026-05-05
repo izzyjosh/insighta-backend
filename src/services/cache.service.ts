@@ -18,7 +18,11 @@ class CacheService {
   async set<T>(key: string, value: T, ttl: number = 3600): Promise<void> {
     try {
       const stringValue = JSON.stringify(value);
-      await redisClient.set(key, stringValue, { EX: ttl });
+      if (ttl > 0) {
+        await redisClient.set(key, stringValue, { EX: ttl });
+      } else {
+        await redisClient.set(key, stringValue);
+      }
     } catch (error) {
       sysLogger.error(`Cache set error: ${error}`);
     }
@@ -40,6 +44,37 @@ class CacheService {
       }
     } catch (error) {
       sysLogger.error(`Cache invalidation error: ${error}`);
+    }
+  }
+
+  async incr(key: string): Promise<number> {
+    try {
+      const v = await redisClient.incr(key);
+      return Number(v);
+    } catch (error) {
+      sysLogger.error(`Cache incr error: ${error}`);
+      return 0;
+    }
+  }
+
+  async decr(key: string): Promise<number> {
+    try {
+      const v = await redisClient.decr(key);
+      return Number(v);
+    } catch (error) {
+      sysLogger.error(`Cache decr error: ${error}`);
+      return 0;
+    }
+  }
+
+  async getNumber(key: string): Promise<number | null> {
+    try {
+      const v = await redisClient.get(key);
+      if (v === null) return null;
+      return Number(v);
+    } catch (error) {
+      sysLogger.error(`Cache getNumber error: ${error}`);
+      return null;
     }
   }
 }

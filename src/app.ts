@@ -10,6 +10,8 @@ import { authRouter } from './routes/auth';
 import cors from 'cors';
 import { config } from './config/config';
 import { AppDataSource } from './config/datasource';
+import { cacheService } from './services/cache.service';
+import { Profile } from './models/Profile.models';
 import { authMiddleware } from './middlewares/authMiddleware';
 import { apiVersion } from './middlewares/versionMiddleware';
 import { authRateLimit, userRateLimit } from './middlewares/rateLimit';
@@ -85,6 +87,19 @@ app.use(NotFoundErrorHandler);
   try {
     await AppDataSource.initialize();
     sysLogger.info('Database connection established successfully');
+    // Initialize profiles total counter in Redis if not present
+    try {
+      const current = await cacheService.getNumber('profiles:total');
+      if (current === null) {
+        const count = await AppDataSource.getRepository(Profile).count();
+        await cacheService.set('profiles:total', count, 0);
+        sysLogger.info(`Initialized profiles:total counter -> ${count}`);
+      } else {
+        sysLogger.info(`profiles:total already set -> ${current}`);
+      }
+    } catch (err) {
+      sysLogger.error(`Failed initializing profiles counter: ${err}`);
+    }
     app.listen(port, () => {
       sysLogger.info(`Server is running on port ${port}`);
     });
