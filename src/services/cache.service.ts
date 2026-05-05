@@ -46,37 +46,6 @@ class CacheService {
       sysLogger.error(`Cache invalidation error: ${error}`);
     }
   }
-
-  async incr(key: string): Promise<number> {
-    try {
-      const v = await redisClient.incr(key);
-      return Number(v);
-    } catch (error) {
-      sysLogger.error(`Cache incr error: ${error}`);
-      return 0;
-    }
-  }
-
-  async decr(key: string): Promise<number> {
-    try {
-      const v = await redisClient.decr(key);
-      return Number(v);
-    } catch (error) {
-      sysLogger.error(`Cache decr error: ${error}`);
-      return 0;
-    }
-  }
-
-  async getNumber(key: string): Promise<number | null> {
-    try {
-      const v = await redisClient.get(key);
-      if (v === null) return null;
-      return Number(v);
-    } catch (error) {
-      sysLogger.error(`Cache getNumber error: ${error}`);
-      return null;
-    }
-  }
 }
 
 export const cacheService = new CacheService();
