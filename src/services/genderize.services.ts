@@ -19,7 +19,11 @@ import { SelectQueryBuilder } from 'typeorm';
 import { parseNaturalQuery } from '../utils/natural-query-logic';
 import { cache } from '../utils/cacheDecorator';
 import { cacheService } from './cache.service';
-import { getSearchCacheKey } from '../utils/normalize-search-filters';
+import {
+  getProfileCountCacheKey,
+  getProfileListCacheKey,
+  getSearchCacheKey,
+} from '../utils/normalize-search-filters';
 
 type ClassifyResult = {
   profile: ProfileResponseDTO;
@@ -115,6 +119,24 @@ class ProfileService {
     return qb;
   }
 
+  private async getCountWithCache(
+    filters: ProfileFilterCriteria,
+  ): Promise<number> {
+    const cacheKey = getProfileCountCacheKey(filters);
+    const cachedCount = await cacheService.get<number>(cacheKey);
+
+    if (cachedCount !== null) {
+      return cachedCount;
+    }
+
+    const baseQuery = this.profileRepository.createQueryBuilder('profile');
+    const filteredQuery = await this.applyFilters(baseQuery, filters);
+    const count = await filteredQuery.clone().getCount();
+
+    await cacheService.set(cacheKey, count, 120);
+    return count;
+  }
+
   async classify(name: string): Promise<ClassifyResult> {
     try {
       const profile = await this.profileRepository.findOneBy({ name });
@@ -195,6 +217,8 @@ class ProfileService {
 
       // Invalidate list cache
       await cacheService.invalidatePattern('profiles:list:*');
+      await cacheService.invalidatePattern('profiles:count:*');
+      await cacheService.invalidatePattern('profiles:search:*');
 
       // Maintain exact total counter and cache the new profile
       try {
@@ -241,8 +265,7 @@ class ProfileService {
   // Cache list queries (3 min)
   @cache({
     ttl: 180,
-    key: (filters: FilterQueryDTO) =>
-      `profiles:list:${JSON.stringify(filters)}`,
+    key: (filters: FilterQueryDTO) => getProfileListCacheKey(filters),
   })
   async getAllProfiles(filters: FilterQueryDTO) {
     const page = Math.max(filters.page, 1);
@@ -261,7 +284,7 @@ class ProfileService {
       .take(limit)
       .getMany();
 
-    const total = await filteredQuery.clone().getCount();
+    const total = await this.getCountWithCache(filters);
 
     const profilesMap: ProfileResponseDTO[] = profiles.map((profile: Profile) =>
       profileResponseSchema.parse(profile),
@@ -299,6 +322,7 @@ class ProfileService {
     // Invalidate caches
     await cacheService.del(`profile:${id}`);
     await cacheService.invalidatePattern('profiles:list:*');
+    await cacheService.invalidatePattern('profiles:count:*');
     await cacheService.invalidatePattern('profiles:search:*');
   }
 
@@ -308,17 +332,23 @@ class ProfileService {
 
     const skip = (page - 1) * limit;
 
+    const startTime = Date.now();
     const parseSearchQuery = parseNaturalQuery(filters.q);
+    const parseTime = Date.now() - startTime;
 
     // 2. Create a CANONICAL cache key from normalized filters
     const cacheKey = getSearchCacheKey(parseSearchQuery, page);
 
     // 3. Check cache FIRST
+    const cacheStartTime = Date.now();
     const cachedResult = await cacheService.get<NaturalSearchResult>(cacheKey);
+    const cacheTime = Date.now() - cacheStartTime;
     if (cachedResult) {
-      logger.info(`Cache hit: ${cacheKey}`);
+      logger.info(`Cache hit (${cacheTime}ms): ${cacheKey}`);
       return cachedResult;
     }
+
+    logger.info(`Cache miss. Parse: ${parseTime}ms, Cache check: ${cacheTime}ms`);
 
     // 4. Cache miss → query the database
     const baseQuery = this.profileRepository.createQueryBuilder('profile');
@@ -331,17 +361,31 @@ class ProfileService {
       ...parseSearchQuery,
     };
 
+    const dbStartTime = Date.now();
     const filteredQuery = await this.applyFilters(baseQuery, naturalFilters);
+    const filterTime = Date.now() - dbStartTime;
 
-    const total = await filteredQuery.clone().getCount();
+    const countStartTime = Date.now();
+    const total = await this.getCountWithCache(naturalFilters);
+    const countTime = Date.now() - countStartTime;
 
+    const dataStartTime = Date.now();
     const data = await filteredQuery.clone().skip(skip).take(limit).getMany();
+    const dataTime = Date.now() - dataStartTime;
+
+    const serializeStartTime = Date.now();
     const result = {
       profiles: data.map((profile) => profileResponseSchema.parse(profile)),
       page: filters.page,
       limit: filters.limit,
       total,
     };
+    const serializeTime = Date.now() - serializeStartTime;
+
+    logger.info(
+      `Query breakdown - Filter: ${filterTime}ms, Count: ${countTime}ms, Data: ${dataTime}ms, Serialize: ${serializeTime}ms`,
+    );
+
     // 5. Store result in cache
     await cacheService.set(cacheKey, result, 120); // 2 min TTL
 

@@ -2,6 +2,7 @@ import { StatusCodes } from 'http-status-codes';
 import { NextFunction, Request, Response } from 'express';
 import APIError from '../utils/api.errors';
 import { ZodError } from 'zod';
+import multer from 'multer';
 
 export const RequestErrorHandler = (
   err: Error | APIError,
@@ -22,6 +23,18 @@ export const RequestErrorHandler = (
       status: 'error',
       message: 'Validation error',
       error: err.issues,
+    });
+    return;
+  }
+
+  if (
+    err instanceof multer.MulterError ||
+    err.message === 'Field name missing'
+  ) {
+    res.status(StatusCodes.BAD_REQUEST).json({
+      status: 'error',
+      message:
+        'Invalid multipart form-data. Upload the CSV using form-data key "file".',
     });
     return;
   }

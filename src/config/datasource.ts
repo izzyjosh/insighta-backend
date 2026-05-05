@@ -9,13 +9,13 @@ export const AppDataSource = new DataSource({
   type: 'postgres',
   url: config.databaseUrl,
   synchronize: true,
-  ssl: {
-    rejectUnauthorized: false,
-  },
-  extra: {
-    max: 25, // connection pool size (optional)
-    min: 5, // minimum connections in pool (optional)
-  },
+  // ssl: {
+  //   rejectUnauthorized: false,
+  // },
+  // extra: {
+  //   max: 25, // connection pool size (optional)
+  //   min: 5, // minimum connections in pool (optional)
+  // },
   logging: ['error'],
   entities: [Profile, User, RefreshToken],
   migrations: ['src/migrations/**/*.ts'],

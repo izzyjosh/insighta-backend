@@ -75,9 +75,6 @@ app.get('/', (req, res) => {
   res.status(StatusCodes.OK).json(response);
 });
 
-// Error handlers middleware (MUST be last)
-// RequestErrorHandler catches APIError and returns appropriate status codes (401, 403, 404, etc.)
-// NotFoundErrorHandler returns 404 as a fallback
 app.use(RequestErrorHandler);
 app.use(NotFoundErrorHandler);
 
