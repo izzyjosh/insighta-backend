@@ -38,6 +38,10 @@ const COUNTRY_MAP: Record<string, string> = Object.entries(
   return acc;
 }, {});
 
+const COUNTRY_ENTRIES = Object.entries(COUNTRY_MAP).sort(
+  ([countryA], [countryB]) => countryB.length - countryA.length,
+);
+
 type AgeRuleResult = {
   min?: number | undefined;
   max?: number | undefined;
@@ -50,6 +54,10 @@ type AgeRule =
 const AGE_RULES: AgeRule[] = [
   { pattern: /young/, min: 16, max: 24 },
   { pattern: /teen/, min: 13, max: 19 },
+  {
+    pattern: /(?:age\s+)?(\d+)\s*(?:to|-|through)\s*(\d+)/,
+    handler: (...[min, max]) => ({ min, max }),
+  },
   {
     pattern: /above (\d+)/,
     handler: (...[n]) => ({ min: n ? n + 1 : undefined }),
@@ -131,7 +139,7 @@ export function parseNaturalQuery(query: string): SearchFilters {
   // -------------------
   // 4. Country detection (PHRASE match)
   // -------------------
-  for (const [country, countryId] of Object.entries(COUNTRY_MAP)) {
+  for (const [country, countryId] of COUNTRY_ENTRIES) {
     // match full phrase inside query
     if (q.includes(country)) {
       result.country_id = countryId;

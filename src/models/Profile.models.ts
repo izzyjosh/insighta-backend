@@ -4,6 +4,7 @@ import {
   CreateDateColumn,
   Entity,
   PrimaryColumn,
+  Index,
 } from 'typeorm';
 import { uuidv7 } from 'uuidv7';
 
@@ -18,6 +19,7 @@ export enum AgeGroup {
   ADULT = 'adult',
   SENIOR = 'senior',
 }
+@Index(['gender', 'country_id', 'age_group'])
 @Entity()
 export class Profile {
   @PrimaryColumn('uuid')

@@ -17,6 +17,13 @@ import {
 import { StatusCodes } from 'http-status-codes';
 import { SelectQueryBuilder } from 'typeorm';
 import { parseNaturalQuery } from '../utils/natural-query-logic';
+import { cache } from '../utils/cacheDecorator';
+import { cacheService } from './cache.service';
+import {
+  getProfileCountCacheKey,
+  getProfileListCacheKey,
+  getSearchCacheKey,
+} from '../utils/normalize-search-filters';
 
 type ClassifyResult = {
   profile: ProfileResponseDTO;
@@ -26,6 +33,13 @@ type ClassifyResult = {
 
 type ProfileFilterCriteria = Omit<FilterQueryDTO, 'gender'> & {
   gender?: FilterQueryDTO['gender'] | Array<'male' | 'female'>;
+};
+
+type NaturalSearchResult = {
+  profiles: ProfileResponseDTO[];
+  page: number;
+  limit: number;
+  total: number;
 };
 
 countries.registerLocale(enLocale);
@@ -98,11 +112,29 @@ class ProfileService {
       });
 
     if (filters.min_gender_probability)
-      qb.andWhere('profile.gender_probabilty >= :min_gender_probabilty', {
-        min_gender_probabilty: filters.min_gender_probability,
+      qb.andWhere('profile.gender_probability >= :min_gender_probability', {
+        min_gender_probability: filters.min_gender_probability,
       });
 
     return qb;
+  }
+
+  private async getCountWithCache(
+    filters: ProfileFilterCriteria,
+  ): Promise<number> {
+    const cacheKey = getProfileCountCacheKey(filters);
+    const cachedCount = await cacheService.get<number>(cacheKey);
+
+    if (cachedCount !== null) {
+      return cachedCount;
+    }
+
+    const baseQuery = this.profileRepository.createQueryBuilder('profile');
+    const filteredQuery = await this.applyFilters(baseQuery, filters);
+    const count = await filteredQuery.clone().getCount();
+
+    await cacheService.set(cacheKey, count, 120);
+    return count;
   }
 
   async classify(name: string): Promise<ClassifyResult> {
@@ -183,6 +215,22 @@ class ProfileService {
 
       await this.profileRepository.save(newProfile);
 
+      // Invalidate list cache
+      await cacheService.invalidatePattern('profiles:list:*');
+      await cacheService.invalidatePattern('profiles:count:*');
+      await cacheService.invalidatePattern('profiles:search:*');
+
+      // Maintain exact total counter and cache the new profile
+      try {
+        await cacheService.set(
+          `profile:${newProfile.id}`,
+          profileResponseSchema.parse(newProfile),
+          300,
+        );
+      } catch (e) {
+        logger.error(`Failed to update cache counter: ${e}`);
+      }
+
       return {
         profile: profileResponseSchema.parse(newProfile),
         statusCode: StatusCodes.CREATED,
@@ -200,6 +248,11 @@ class ProfileService {
     }
   }
 
+  // Cache single profile lookups (5 min)
+  @cache({
+    ttl: 300,
+    key: (id: string) => `profile:${id}`,
+  })
   async getProfile(id: string) {
     const profile = await this.profileRepository.findOneBy({ id });
     if (!profile) {
@@ -209,6 +262,11 @@ class ProfileService {
     return profileResponseSchema.parse(profile);
   }
 
+  // Cache list queries (3 min)
+  @cache({
+    ttl: 180,
+    key: (filters: FilterQueryDTO) => getProfileListCacheKey(filters),
+  })
   async getAllProfiles(filters: FilterQueryDTO) {
     const page = Math.max(filters.page, 1);
     const limit = Math.max(filters.limit, 1);
@@ -226,7 +284,7 @@ class ProfileService {
       .take(limit)
       .getMany();
 
-    const total = await baseQuery.getCount();
+    const total = await this.getCountWithCache(filters);
 
     const profilesMap: ProfileResponseDTO[] = profiles.map((profile: Profile) =>
       profileResponseSchema.parse(profile),
@@ -260,16 +318,39 @@ class ProfileService {
       throw new NotFoundError('Profile not found');
     }
     await this.profileRepository.remove(profile);
+
+    // Invalidate caches
+    await cacheService.del(`profile:${id}`);
+    await cacheService.invalidatePattern('profiles:list:*');
+    await cacheService.invalidatePattern('profiles:count:*');
+    await cacheService.invalidatePattern('profiles:search:*');
   }
 
-  async naturalSearch(filters: NaturalSearchDTO) {
+  async naturalSearch(filters: NaturalSearchDTO): Promise<NaturalSearchResult> {
     const page = Math.max(filters.page, 1);
     const limit = Math.max(filters.limit, 1);
 
     const skip = (page - 1) * limit;
 
+    const startTime = Date.now();
     const parseSearchQuery = parseNaturalQuery(filters.q);
+    const parseTime = Date.now() - startTime;
 
+    // 2. Create a CANONICAL cache key from normalized filters
+    const cacheKey = getSearchCacheKey(parseSearchQuery, page);
+
+    // 3. Check cache FIRST
+    const cacheStartTime = Date.now();
+    const cachedResult = await cacheService.get<NaturalSearchResult>(cacheKey);
+    const cacheTime = Date.now() - cacheStartTime;
+    if (cachedResult) {
+      logger.info(`Cache hit (${cacheTime}ms): ${cacheKey}`);
+      return cachedResult;
+    }
+
+    logger.info(`Cache miss. Parse: ${parseTime}ms, Cache check: ${cacheTime}ms`);
+
+    // 4. Cache miss → query the database
     const baseQuery = this.profileRepository.createQueryBuilder('profile');
 
     const naturalFilters: ProfileFilterCriteria = {
@@ -280,17 +361,35 @@ class ProfileService {
       ...parseSearchQuery,
     };
 
+    const dbStartTime = Date.now();
     const filteredQuery = await this.applyFilters(baseQuery, naturalFilters);
+    const filterTime = Date.now() - dbStartTime;
 
-    const total = await baseQuery.getCount();
+    const countStartTime = Date.now();
+    const total = await this.getCountWithCache(naturalFilters);
+    const countTime = Date.now() - countStartTime;
 
+    const dataStartTime = Date.now();
     const data = await filteredQuery.clone().skip(skip).take(limit).getMany();
-    return {
+    const dataTime = Date.now() - dataStartTime;
+
+    const serializeStartTime = Date.now();
+    const result = {
       profiles: data.map((profile) => profileResponseSchema.parse(profile)),
       page: filters.page,
       limit: filters.limit,
       total,
     };
+    const serializeTime = Date.now() - serializeStartTime;
+
+    logger.info(
+      `Query breakdown - Filter: ${filterTime}ms, Count: ${countTime}ms, Data: ${dataTime}ms, Serialize: ${serializeTime}ms`,
+    );
+
+    // 5. Store result in cache
+    await cacheService.set(cacheKey, result, 120); // 2 min TTL
+
+    return result;
   }
 }
 
