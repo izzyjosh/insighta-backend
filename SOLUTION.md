@@ -12,3 +12,10 @@
 
    Trade Off:
    - Slower write which is allowable as the system is more of read queries
+
+3. Increase Connection pooling:
+   - increase pool value from 10 to 25 so that it scales properly based on traffic
+
+4. Total rows:
+   - As data increases, counting all rows to return the total profiles is expensive
+   - I initialize the project to store the total in redis cache and increment or decrement it when there is a add or delete.
