@@ -50,3 +50,31 @@
     - Massive cache hit rate improvement (semantically equivalent queries share cache)
     - More predictable performance for natural language queries
     - Requires careful design of normalizer (gender synonyms, country codes, age range formats)
+
+## Query performance — before / after (brief)
+
+| Scenario                               |    Before (ms) |          After (ms) |
+| -------------------------------------- | -------------: | ------------------: |
+| Cold search (no cache)                 |    4000 - 5000 |         1000 - 2000 |
+| Warm search (cache hit)                |      400 - 800 |               < 200 |
+| Bulk CSV ingestion (per 500-row chunk) | N/A (streamed) | 300 - 600 per chunk |
+
+Notes: numbers are illustrative based on hosted Redis/Postgres network latencies; "After" reflects optimizations: deterministic cache keys, cached counts, streaming uploads, and avoiding per-profile expensive parsing where possible.
+
+## Ingestion failures and edge cases
+
+- Validation failures: invalid rows are skipped and counted in the upload summary.
+- Duplicate rows: detected per-batch (pre-query existing names) and skipped; DB unique constraint acts as a last-resort guard.
+- Partial failures: worker writes intermediate status to Redis; failed chunks are reported and retried per job policy.
+
+- Row validation: each CSV row is validated against schema; malformed rows increment `skipped` with a reason logged. The worker continues processing remaining chunks.
+- Column mismatch / malformed CSV: line skipped, warning emitted, row excluded from batch insert.
+- Duplicate detection: before inserting a 500-row chunk the worker runs a short query to fetch existing names for that chunk; duplicates are filtered in-memory to avoid constraint violations and reduce retries.
+- Constraint collisions: inserts use `orIgnore(true)` where supported; if a unique constraint still triggers, the worker records the error and continues.
+- Network failures (DB/Redis): the worker implements retry/backoff for transient network errors and persists the last-known progress to Redis so processing can resume or be inspected.
+- Transactional boundaries: each chunk is processed in its own transaction to limit rollback scope; failures affect only that chunk.
+- Worker crash / restart: job progress (processed rows, inserted/skipped counts) is stored in Redis periodically; on restart the worker can resume based on last checkpoint or retry the job depending on job metadata.
+- Large-file safety: streaming parser never loads full file into memory; temp files are cleaned up after processing; long-running jobs are monitored and can be split if necessary.
+- Observability: worker logs include per-chunk summaries and errors; final upload summary is written to Redis for client retrieval.
+
+---
