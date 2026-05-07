@@ -2,6 +2,7 @@ import { AppDataSource } from '../config/datasource';
 import { Profile, Gender, AgeGroup } from '../models/Profile.models';
 import sysLogger from '../utils/logger';
 import { CsvRow } from '../utils/csv-parser';
+import { uuidv7 } from 'uuidv7';
 
 export type SkipReason =
   | 'missing_fields'
@@ -154,11 +155,12 @@ export class BulkImportService {
 
     try {
       // Bulk insert using query builder
+      const rowsWithId = toInsert.map((r) => ({ id: uuidv7(), ...r }));
       const result = await this.profileRepository
         .createQueryBuilder()
         .insert()
         .into(Profile)
-        .values(toInsert)
+        .values(rowsWithId)
         .orIgnore(true) // Skip on duplicate key (PostgreSQL: ON CONFLICT DO NOTHING)
         .execute();
 

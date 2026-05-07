@@ -149,7 +149,6 @@ class ProfileController {
     next: NextFunction,
   ): Promise<void> {
     try {
-      const reqStartTime = Date.now();
       const validatedQuery = req.validatedQuery?.success
         ? req.validatedQuery.data
         : undefined;
@@ -157,11 +156,9 @@ class ProfileController {
         next(new BadRequestError('Invalid query parameters'));
         return;
       }
-      const serviceStartTime = Date.now();
       const results: Awaited<ReturnType<typeof profileService.naturalSearch>> =
         await profileService.naturalSearch(validatedQuery);
-      const serviceTime = Date.now() - serviceStartTime;
-      
+
       res.status(StatusCodes.OK).json(
         successResponse<ProfileResponseDTO[]>({
           data: results.profiles,
@@ -170,11 +167,6 @@ class ProfileController {
           total: results.total,
           requestPath: req.originalUrl,
         }),
-      );
-      
-      const totalTime = Date.now() - reqStartTime;
-      sysLogger.info(
-        `naturalSearch endpoint - Service: ${serviceTime}ms, Total: ${totalTime}ms, Query: ${validatedQuery.q}`,
       );
     } catch (error) {
       next(error);

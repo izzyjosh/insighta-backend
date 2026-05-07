@@ -9,6 +9,8 @@
 
 2. Implement Indexing:
    Indexing is just like making columns that are frequently used to be easily queried so that the database does not perform full row scan
+   - added index on frequently accessed column
+   - also added composite index for combination of filters
 
    Trade Off:
    - Slower write which is allowable as the system is more of read queries
