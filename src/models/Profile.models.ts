@@ -19,7 +19,9 @@ export enum AgeGroup {
   ADULT = 'adult',
   SENIOR = 'senior',
 }
-@Index(['gender', 'country_id', 'age_group'])
+@Index(['country_id'])
+@Index(['country_id', 'gender', 'age_group'])
+@Index(['age'])
 @Entity()
 export class Profile {
   @PrimaryColumn('uuid')
